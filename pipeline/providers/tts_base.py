@@ -74,6 +74,8 @@ class BaseTTS:
     retries = 4
     cost_per_1k_chars = 0.0
     speed = 1.0              # >1 = faster narration, applied via atempo
+    post_filter = ""         # optional ffmpeg audio-filter chain (pitch/EQ/comp)
+                             # applied locally at concat time — "voice color"
 
     def __init__(self) -> None:
         self.cost_usd = 0.0
@@ -131,8 +133,12 @@ class BaseTTS:
     def _concat(self, parts: list[Path], out_path: Path) -> None:
         lst = out_path.with_suffix(".concat.txt")
         lst.write_text("".join(f"file '{p.name}'\n" for p in parts))
-        af = f"atempo={self.speed:.3f}" if abs(self.speed - 1.0) > 1e-3 else "anull"
+        chain = []
+        if abs(self.speed - 1.0) > 1e-3:
+            chain.append(f"atempo={self.speed:.3f}")
+        if self.post_filter:
+            chain.append(self.post_filter)
         run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
-             "-af", af, "-ar", "44100", "-ac", "2", "-b:a", "128k",
-             str(out_path)])
+             "-af", ",".join(chain) or "anull", "-ar", "44100", "-ac", "2",
+             "-b:a", "128k", str(out_path)])
         lst.unlink()

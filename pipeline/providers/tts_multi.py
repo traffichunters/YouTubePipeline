@@ -37,6 +37,7 @@ class GeminiTTS(BaseTTS):
         self._voice = voice_cfg.get("gemini_voice", "Charon")
         self._instructions = voice_cfg.get("tts_instructions", DEFAULT_INSTRUCTIONS)
         self.speed = float(voice_cfg.get("tts_speed", 1.0))
+        self.post_filter = voice_cfg.get("post_filter", "")
 
     def _synth_chunk(self, text: str, out_path: Path) -> None:
         from google.genai import types
@@ -85,6 +86,7 @@ class OpenAITTS(BaseTTS):
         self._voice = voice_cfg.get("openai_voice", "onyx")
         self._instructions = voice_cfg.get("tts_instructions", DEFAULT_INSTRUCTIONS)
         self.speed = float(voice_cfg.get("tts_speed", 1.0))
+        self.post_filter = voice_cfg.get("post_filter", "")
 
     def _synth_chunk(self, text: str, out_path: Path) -> None:
         with self._client.audio.speech.with_streaming_response.create(
