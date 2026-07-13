@@ -27,7 +27,7 @@ STAGES = [
     ("s1", "topic", s1_topic.run_stage, ["topic_brief.json"]),
     ("s2", "script", s2_script.run_stage, ["script.json"]),
     ("s3", "tts", s3_tts.run_stage, ["timings.json"]),
-    ("s4", "images", s4_images.run_stage, ["images"]),
+    ("s4", "images", s4_images.run_stage, ["images/.complete"]),
     ("s5", "thumbnail", s5_thumbnail.run_stage, ["thumbnail.png"]),
     ("s6", "assemble", s6_assemble.run_stage, ["final.mp4"]),
     ("s7", "metadata", s7_metadata.run_stage, ["metadata.txt"]),

@@ -46,6 +46,9 @@ def run_stage(ctx) -> None:
         if (i + 1) % 10 == 0:
             log(f"  {i + 1}/{n}")
     ctx.costs.add_cost(getattr(engine, "cost_usd", 0.0))
+    # completion marker: the stage cache keys on this, not on the bare directory,
+    # so a partially-generated set resumes instead of being skipped
+    (imgdir / ".complete").write_text(str(n))
 
 
 def _beats_from_script(script: dict, brief: dict, n: int) -> list[str]:
