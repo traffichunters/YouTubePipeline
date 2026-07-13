@@ -31,6 +31,7 @@ class ElevenTTS(BaseTTS):
         self._settings = {
             "stability": voice_cfg.get("stability", 0.5),
             "similarity_boost": voice_cfg.get("similarity_boost", 0.75),
+            "style": voice_cfg.get("style", 0.0),   # emphasis/expressiveness dial
         }
         # per-provider knob: tts_speed is often tuned for the steerable engines
         self.speed = float(voice_cfg.get("elevenlabs_speed",
