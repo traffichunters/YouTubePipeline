@@ -8,9 +8,14 @@ channel:
 engines:
   script: claude
   image: gemini-flash
-  tts: elevenlabs
+  tts: gemini
 
 voice:
+  gemini_voice: Callirrhoe
+  tts_instructions: >-
+    Gentle, soft, calm voice — a quiet nature-documentary narrator winding
+    the listener down toward sleep. Slow and even, no emphasis spikes.
+  tts_speed: 1.0
   voice_id: env:ELEVENLABS_VOICE_ID
   model: eleven_multilingual_v2
   stability: 0.6

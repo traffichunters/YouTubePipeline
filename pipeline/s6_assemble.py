@@ -46,12 +46,40 @@ def n_images_needed(hero_seconds: float, vis: dict) -> int:
 
 
 # ------------------------------------------------------------------ helpers --
+_HW: bool | None = None
+
+
+def _hwaccel_available() -> bool:
+    """Probe once whether h264_videotoolbox (Apple hardware encoder) actually
+    works in this ffmpeg build — several times faster than libx264 on this Mac
+    and frees the CPU. Ported from sleepcast."""
+    global _HW
+    if _HW is None:
+        import subprocess
+        try:
+            proc = subprocess.run(
+                [FFMPEG, "-y", "-v", "error", "-f", "lavfi",
+                 "-i", "color=black:s=64x64:d=0.1",
+                 "-c:v", "h264_videotoolbox", "-f", "null", "-"],
+                capture_output=True, timeout=15)
+            _HW = proc.returncode == 0
+        except Exception:  # noqa: BLE001
+            _HW = False
+        log(f"encoder: {'h264_videotoolbox (hardware)' if _HW else 'libx264'}")
+    return _HW
+
+
 def _enc_args(ctx) -> list[str]:
     if ctx.preview:
         return ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
                 "-pix_fmt", "yuv420p"]
+    if _hwaccel_available():
+        # identical settings on every part so the final concat can stream-copy
+        return ["-c:v", "h264_videotoolbox", "-b:v", "12M",
+                "-pix_fmt", "yuv420p", "-video_track_timescale", "90000"]
     return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-            "-pix_fmt", "yuv420p", "-profile:v", "high"]
+            "-pix_fmt", "yuv420p", "-profile:v", "high",
+            "-video_track_timescale", "90000"]
 
 
 def _res(ctx) -> tuple[int, int]:

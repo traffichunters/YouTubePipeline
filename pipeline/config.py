@@ -18,11 +18,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CHANNELS_DIR = REPO_ROOT / "channels"
 OUTPUT_DIR = REPO_ROOT / "output"
 
-# keys a live (non-stub) engine needs; checked lazily by providers
+# keys a live (non-stub) engine needs; checked lazily by providers.
+# "A|B" means either variable satisfies the requirement.
 ENV_KEYS = {
-    "gemini": ["GOOGLE_API_KEY"],
-    "gemini-flash": ["GOOGLE_API_KEY"],
-    "imagen-4": ["GOOGLE_API_KEY"],
+    "gemini": ["GOOGLE_API_KEY|GEMINI_API_KEY"],
+    "gemini-flash": ["GOOGLE_API_KEY|GEMINI_API_KEY"],
+    "imagen-4": ["GOOGLE_API_KEY|GEMINI_API_KEY"],
+    "openai": ["OPENAI_API_KEY"],
     "elevenlabs": ["ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID"],
     "claude": [],   # uses the local `claude` CLI's own auth
     "stub": [],
@@ -68,7 +70,8 @@ def load_env() -> None:
 
 def require_keys(engine: str) -> None:
     """Fail fast, with a clear message, when a live engine lacks its keys."""
-    missing = [k for k in ENV_KEYS.get(engine, []) if not os.environ.get(k)]
+    missing = [k for k in ENV_KEYS.get(engine, [])
+               if not any(os.environ.get(alt) for alt in k.split("|"))]
     if missing:
         die(
             f"engine '{engine}' needs {', '.join(missing)} — copy .env.example to "

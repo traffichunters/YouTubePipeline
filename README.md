@@ -19,9 +19,12 @@ Specs this implements (in the parent folder): `PIPELINE-GOAL.md` (build brief),
 cp .env.example .env                               # then fill in your keys
 ```
 
-`.env` needs `GOOGLE_API_KEY` (images), `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID`
-(narration). The default script engine is the local `claude` CLI (no extra key).
-ffmpeg must be on PATH.
+`.env` needs `GOOGLE_API_KEY` — that one key covers images AND the default
+Gemini TTS narration (~€1 per 90-min video, steerable via `tts_instructions`
+in the channel profile). Optional: `OPENAI_API_KEY` (gpt-4o-mini-tts) or
+`ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` (premium, ~€10+/video) for
+channels that switch `engines.tts`. The default script engine is the local
+`claude` CLI (no extra key). ffmpeg must be on PATH.
 
 Each channel needs two one-time assets (already generated for the bundled channels):
 
@@ -79,7 +82,13 @@ No code changes. `channels/demo-nature-sleep/` exists as the working proof.
   dir, so `../../shared/…` works).
 - The dark ⅔ of every video is encoded once per loop and repeated with `-c copy` —
   that's why a 2-hour video renders fast.
-- Costs are logged per stage in the run summary. TTS (~$0.11/1k chars) and images
-  (~$0.04/image) dominate: a full 130-min video ≈ ~90 images + ~95k chars.
+- Costs are logged per stage in the run summary. A full 130-min video ≈ ~90
+  images (~$3.60) + ~95k chars TTS (gemini ~€1 / openai ~€1.3 / elevenlabs
+  ~€10+). The TTS layer has a rate limiter, per-chunk retries honoring server
+  retryDelay, resume, and parallel synthesis (ported from sleepcast).
+- Long segments (>1500 words) are written chapter-by-chapter (outline first,
+  continuity guidance, no re-greetings) — single-shot 5k-word generations are
+  unreliable.
+- Encoding uses Apple's h264_videotoolbox hardware encoder when available.
 - Policy note (PIPELINE-GOAL.md §10): the SLH clone is deliberate and temporary;
   differentiation later = editing that channel folder, nothing else.

@@ -38,6 +38,12 @@ def get_tts_engine(name: str, voice_cfg: dict):
     if name == "elevenlabs":
         from .eleven import ElevenTTS
         return ElevenTTS(voice_cfg)
+    if name == "gemini":
+        from .tts_multi import GeminiTTS
+        return GeminiTTS(voice_cfg)
+    if name == "openai":
+        from .tts_multi import OpenAITTS
+        return OpenAITTS(voice_cfg)
     if name == "stub":
         from .stub import StubTTS
         return StubTTS(voice_cfg)

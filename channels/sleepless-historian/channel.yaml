@@ -5,13 +5,23 @@ channel:
   slug: sleepless-historian
   display_name: "BORING HISTORY FOR SLEEP"
 
-engines:                  # each switchable per run with --stub / --engines
+engines:                  # each switchable per run with --stub / --*-engine flags
   script: claude          # claude | gemini | stub
   image: gemini-flash     # gemini-flash (Nano Banana) | imagen-4 | stub
-  tts: elevenlabs         # elevenlabs | stub (macOS `say`, dev only)
+  tts: gemini             # gemini (~€1/video) | openai | elevenlabs (~€10+) | stub
 
-voice:                    # ElevenLabs
-  voice_id: env:ELEVENLABS_VOICE_ID   # set in .env; see .env.example for the character brief
+voice:
+  # gemini / openai (steerable): the delivery prompt is the main quality knob
+  gemini_voice: Enceladus           # deep, calm prebuilt voice
+  tts_instructions: >-
+    Warm, calm, low male voice — a deadpan bedtime-documentary narrator.
+    Measured, relaxed storytelling pace: flowing and natural, never rushed,
+    never dragging. Even and steady, no emphasis spikes, faintly wry.
+  tts_speed: 0.91   # measured: this wording synthesizes ~160 wpm; x0.91 ≈ 146 wpm.
+                    # (Instructions are a blunt lever: "slow" wording -> 80 wpm,
+                    # neutral -> 170-207. Re-measure with one segment per new voice.)
+  # elevenlabs (if engines.tts is switched back)
+  voice_id: env:ELEVENLABS_VOICE_ID
   model: eleven_multilingual_v2
   stability: 0.5
   similarity_boost: 0.75
