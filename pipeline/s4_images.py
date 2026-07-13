@@ -32,7 +32,17 @@ def run_stage(ctx) -> None:
         out = imgdir / f"img_{i:03d}.png"
         if out.exists() and not ctx.force:
             continue
-        engine.generate(fill(tmpl, era_style=era_style, beat=beat), out)
+        try:
+            engine.generate(fill(tmpl, era_style=era_style, beat=beat), out)
+        except Exception as e:  # noqa: BLE001 — one bad image must not kill the run
+            prev = imgdir / f"img_{i-1:03d}.png"
+            if i > 0 and prev.exists():
+                import shutil
+                shutil.copy(prev, out)
+                log(f"  WARNING img_{i:03d} failed permanently — reused previous "
+                    f"still ({str(e)[:120]})")
+            else:
+                raise
         if (i + 1) % 10 == 0:
             log(f"  {i + 1}/{n}")
     ctx.costs.add_cost(getattr(engine, "cost_usd", 0.0))

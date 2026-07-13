@@ -71,18 +71,40 @@ class GeminiImage:
             img = res.generated_images[0].image
             out_path.write_bytes(img.image_bytes)
         else:  # gemini-2.5-flash-image ("Nano Banana")
-            res = self.client.models.generate_content(
-                model=self.model_id,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE"],
-                    image_config=types.ImageConfig(aspect_ratio=aspect),
-                ),
-            )
-            part = next((p for p in res.candidates[0].content.parts
-                         if getattr(p, "inline_data", None)), None)
-            if part is None:
-                die(f"no image returned for prompt: {prompt[:120]}…")
-            out_path.write_bytes(part.inline_data.data)
+            data = self._flash_with_retries(prompt, aspect)
+            out_path.write_bytes(data)
         self.cost_usd += IMAGE_COST[self.name]
         return out_path
+
+    def _flash_with_retries(self, prompt: str, aspect: str,
+                            retries: int = 4) -> bytes:
+        """Empty candidates happen (safety filter on violent beats, transients).
+        Retry; from attempt 3 swap to a sanitized prompt (style only, no beat)."""
+        import time
+        from google.genai import types
+        sanitized = (prompt.split(", depicting:")[0]
+                     + ", depicting: a calm, atmospheric historical scene. "
+                     "No text, no borders, museum-quality painting.")
+        last = ""
+        for attempt in range(retries + 1):
+            use = prompt if attempt < 2 else sanitized
+            try:
+                res = self.client.models.generate_content(
+                    model=self.model_id, contents=use,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                        image_config=types.ImageConfig(aspect_ratio=aspect)),
+                )
+                cand = (res.candidates or [None])[0]
+                if cand is not None and cand.content is not None:
+                    part = next((p for p in cand.content.parts or []
+                                 if getattr(p, "inline_data", None)), None)
+                    if part is not None:
+                        return part.inline_data.data
+                last = f"empty candidate (finish={getattr(cand, 'finish_reason', None)})"
+            except Exception as e:  # noqa: BLE001 — transient API failures
+                last = str(e)[:200]
+            log(f"  image retry {attempt + 1}/{retries}"
+                f"{' [sanitized prompt]' if attempt >= 1 else ''}: {last}")
+            time.sleep(3 * (attempt + 1))
+        raise RuntimeError(f"image generation failed after {retries + 1} tries: {last}")
