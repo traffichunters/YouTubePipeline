@@ -32,10 +32,9 @@ import numpy as np
 DRIFT_DEG = 30.0          # above horizontal, toward upper-left
 SPEED_FRAC = 0.075        # of frame width, per second
 BREATH_PERIOD_S = 6.0     # firelight breathing
-HAZE_LEVEL = 14.0         # peak haze luma contribution (out of 255)
 
-# Particle styles. The smoke/haze layer is identical across styles (same seed ->
-# same drift); only the specks differ.
+# Particle + smoke styles. The smoke drift pattern is identical across styles
+# (same seed); its visibility/texture is per-style.
 STYLES = {
     "embers": dict(
         density=60,               # particles per 1920x1080 (sparse, like the original)
@@ -49,6 +48,9 @@ STYLES = {
         tw_gamma=3.0,             # sharp on/off
         tw_floor=0.0,             # fully dark between twinkles
         blur_taps=((0.0, 0.55), (-0.5, 0.3), (-1.0, 0.15)),
+        haze_level=14.0,          # peak smoke luma (out of 255) — SLH-subtle
+        haze_gamma=1.0,           # blotch contrast (1 = soft)
+        haze_rgb=(1.0, 0.72, 0.45),   # warm grey-orange
     ),
     "dust": dict(
         density=95,               # more, finer specks
@@ -62,6 +64,9 @@ STYLES = {
         tw_gamma=1.5,
         tw_floor=0.25,            # motes stay faintly visible between pulses
         blur_taps=((0.0, 0.7), (-0.5, 0.3)),
+        haze_level=36.0,          # smoke clearly visible, drifting with the dust
+        haze_gamma=1.7,           # more defined wisps/blotches, darker gaps
+        haze_rgb=(0.88, 0.85, 0.78),  # neutral-warm grey smoke
     ),
 }
 
@@ -137,7 +142,7 @@ def main() -> int:
     hv2 = round(hv2 * T / NS) * NS / T or NS / T
     cy, cx = np.mgrid[0:H, 0:W]
     sy1, sx1 = (cy % NS), (cx % NS)
-    haze_rgb = np.array([1.0, 0.72, 0.45], np.float32)             # warm grey-orange
+    haze_rgb = np.array(st["haze_rgb"], np.float32)
 
     breath_cycles = round(T / BREATH_PERIOD_S)
 
@@ -160,8 +165,10 @@ def main() -> int:
         off2 = int(hv2 * t) % NS
         hz = (haze1[(sy1 + off1 // 3) % NS, (sx1 + off1) % NS] * 0.65
               + haze2[(sy1 + off2 // 3) % NS, (sx1 + off2) % NS] * 0.35)
+        if st["haze_gamma"] != 1.0:
+            hz = hz ** st["haze_gamma"]        # sharpen wisps, darken gaps
         breath = 1.0 + 0.35 * np.sin(2 * np.pi * breath_cycles * t / T)
-        frame += (hz * HAZE_LEVEL * breath)[..., None] * haze_rgb
+        frame += (hz * st["haze_level"] * breath)[..., None] * haze_rgb
 
         # specks with motion blur; visibility curve depends on style
         px = (x0 + vx * t) % wrap_x - 40
@@ -186,6 +193,8 @@ def main() -> int:
                     frame[y1c:y2c, x1c:x2c] += (
                         patch[..., None] * ember_rgb * (255 * vis[i] * alpha * gain))
 
+        # dither: breaks 8-bit banding on the smooth smoke gradients
+        frame += rng.uniform(-1.0, 1.0, (H, W, 1)).astype(np.float32)
         np.clip(frame, 0, 255, out=frame)
         enc.stdin.write(frame.astype(np.uint8).tobytes())
         if f % (FPS * 10) == 0:
