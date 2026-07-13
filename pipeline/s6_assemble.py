@@ -96,6 +96,95 @@ def _prep_img(idx: int, w: int, h: int) -> str:
             f"crop={w}:{h},setsar=1,vignette=angle=PI/5,format=yuv420p[im{idx}]")
 
 
+def _valid_duration(path: Path, expected_s: float, tol: float = 2.0) -> bool:
+    """Guards against reusing partial files left by killed runs."""
+    if not path.exists():
+        return False
+    try:
+        return abs(ffprobe_duration(path) - expected_s) <= tol
+    except SystemExit:
+        return False
+
+
+BATCH = 10  # images per ffmpeg invocation — keeps filtergraph memory bounded
+
+
+def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
+                        logo_h, op_hero, W, H, fps, work: Path) -> Path:
+    """Hero slideshow in resumable batches, then one lightweight file-level
+    xfade join. Ember-loop offsets stay continuous across batch boundaries."""
+    loop_len = ffprobe_duration(overlay)
+    batches = [list(range(i, min(i + BATCH, len(images))))
+               for i in range(0, len(images), BATCH)]
+    seg_files, seg_durs, t_cursor = [], [], 0.0
+
+    for b, idxs in enumerate(batches):
+        last_batch = b == len(batches) - 1
+        bh = [holds[i] for i in idxs]
+        if not last_batch:
+            bh[-1] += trans          # consumed by the batch-boundary xfade
+        seg = work / f"hero_b{b:02d}.mp4"
+        seg_dur = sum(bh)
+        if not (_valid_duration(seg, seg_dur) and not ctx.force):
+            n = len(idxs)
+            inputs: list[str] = []
+            for j, i in enumerate(idxs):
+                dur = bh[j] + (trans if j < n - 1 else 0)
+                inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-r", str(fps),
+                           "-i", str(images[i])]
+            ov_off = t_cursor % loop_len
+            inputs += ["-ss", f"{ov_off:.3f}", "-stream_loop", "-1",
+                       "-i", str(overlay)]
+            inputs += ["-i", str(logo)]
+            parts = [_prep_img(j, W, H) for j in range(n)]
+            if n == 1:
+                parts.append("[im0]copy[xf]")
+            else:
+                offset, cur = 0.0, "im0"
+                for j in range(1, n):
+                    offset += bh[j - 1]
+                    nxt = f"xf{j}" if j < n - 1 else "xf"
+                    parts.append(f"[{cur}][im{j}]xfade=transition=hblur:"
+                                 f"duration={trans}:offset={offset:.3f}[{nxt}]")
+                    cur = nxt
+            parts += [
+                f"[{n}:v]scale={W}:{H},setsar=1,format=gbrp,"
+                f"lutrgb=r=val*{op_hero}:g=val*{op_hero}:b=val*{op_hero}[ov]",
+                "[xf]format=gbrp[base]",
+                "[base][ov]blend=all_mode=screen,format=yuv420p[lit]",
+                f"[{n+1}:v]scale=-2:{logo_h}[lg]",
+                "[lit][lg]overlay=24:H-h-24[vout]",
+            ]
+            run([FFMPEG, "-y", *inputs, "-filter_complex", ";".join(parts),
+                 "-map", "[vout]", "-an", "-t", f"{seg_dur:.3f}", "-r", str(fps),
+                 *_enc_args(ctx), str(seg)])
+            log(f"  hero batch {b + 1}/{len(batches)} "
+                f"({seg_dur/60:.1f} min)")
+        seg_files.append(seg)
+        seg_durs.append(seg_dur)
+        t_cursor += seg_dur - (0 if last_batch else trans)
+
+    hero = work / "hero.mp4"
+    if len(seg_files) == 1:
+        seg_files[0].rename(hero)
+        return hero
+    # file-level xfade join (few inputs, sequential decode — memory-light)
+    inputs = []
+    for s in seg_files:
+        inputs += ["-i", str(s)]
+    parts, offset, cur = [], 0.0, "0:v"
+    for k in range(1, len(seg_files)):
+        offset += seg_durs[k - 1] - trans
+        nxt = f"j{k}" if k < len(seg_files) - 1 else "vout"
+        parts.append(f"[{cur}][{k}:v]xfade=transition=hblur:"
+                     f"duration={trans}:offset={offset:.3f}[{nxt}]")
+        cur = nxt
+    run([FFMPEG, "-y", *inputs, "-filter_complex", ";".join(parts),
+         "-map", "[vout]", "-an", "-t", f"{hero_s:.3f}", "-r", str(fps),
+         *_enc_args(ctx), str(hero)])
+    return hero
+
+
 # -------------------------------------------------------------------- stage --
 def run_stage(ctx) -> None:
     vis = ctx.channel["visuals"]
@@ -131,43 +220,13 @@ def run_stage(ctx) -> None:
         f"(ramp {vis.get('intro_ramp_holds')}, steady {vis['hero_image_seconds']}s)")
 
     # ---- 1) hero.mp4: stills -> xfade hblur chain -> vignette art + overlay + logo
+    # Built in BATCHES of ~10 images: a 75-input single filtergraph gets
+    # memory-killed on macOS. Batches are resumable and duration-verified.
     hero_mp4 = work / "hero.mp4"
-    if not hero_mp4.exists() or ctx.force:
-        n = len(images)
-        inputs: list[str] = []
-        for i, (img, hold) in enumerate(zip(images, holds)):
-            dur = hold + (trans if i < n - 1 else 0)
-            inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-r", str(fps),
-                       "-i", str(img)]
-        inputs += ["-stream_loop", "-1", "-i", str(overlay)]     # input n
-        inputs += ["-i", str(logo)]                              # input n+1
-
-        parts = [_prep_img(i, W, H) for i in range(n)]
-        if n == 1:
-            parts.append("[im0]copy[xf]")
-        else:
-            offset = 0.0
-            cur = "im0"
-            for i in range(1, n):
-                offset += holds[i - 1]
-                nxt = f"xf{i}"
-                parts.append(f"[{cur}][im{i}]xfade=transition=hblur:"
-                             f"duration={trans}:offset={offset:.3f}[{nxt}]")
-                cur = nxt
-            parts.append(f"[{cur}]copy[xf]")
-        parts += [
-            f"[{n}:v]scale={W}:{H},setsar=1,format=gbrp,"
-            f"lutrgb=r=val*{op_hero}:g=val*{op_hero}:b=val*{op_hero}[ov]",
-            "[xf]format=gbrp[base]",
-            "[base][ov]blend=all_mode=screen,format=yuv420p[lit]",
-            f"[{n+1}:v]scale=-2:{logo_h}[lg]",
-            f"[lit][lg]overlay=24:H-h-24[vout]",
-        ]
-        run([FFMPEG, "-y", *inputs,
-             "-filter_complex", ";".join(parts),
-             "-map", "[vout]", "-an",
-             "-t", f"{hero_s:.3f}", "-r", str(fps),
-             *_enc_args(ctx), str(hero_mp4)])
+    if not _valid_duration(hero_mp4, hero_s) or ctx.force:
+        hero_mp4 = _build_hero_chunked(ctx, images, holds, trans, hero_s,
+                                       overlay, logo, logo_h, op_hero,
+                                       W, H, fps, work)
         log(f"hero.mp4: {ffprobe_duration(hero_mp4):.1f}s")
 
     # ---- 2) dark loop: encoded once, repeated by stream copy ------------------
