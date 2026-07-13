@@ -8,18 +8,25 @@ channel:
 engines:                  # each switchable per run with --stub / --*-engine flags
   script: claude          # claude | gemini | stub
   image: gemini-flash     # gemini-flash (Nano Banana) | imagen-4 | stub
-  tts: elevenlabs         # designed voice "Sleepless Narrator v1" | gemini (~€1) | openai | stub
+  tts: gemini             # Puck, young light-Irish storyteller (locked 2026-07-13)
+                          # | elevenlabs (designed v1/v2 voices) | openai | stub
 
 voice:
-  # gemini / openai (steerable): the delivery prompt is the main quality knob
-  gemini_voice: Enceladus           # deep, calm prebuilt voice
+  # ACTIVE: "Puck" — natively young voice, light-Irish fireside storyteller.
+  # Chosen by ear from 20+ candidates (see output/voice-design/), 2026-07-13.
+  gemini_voice: Puck
   tts_instructions: >-
-    Warm, calm, low male voice — a deadpan bedtime-documentary narrator.
-    Measured, relaxed storytelling pace: flowing and natural, never rushed,
-    never dragging. Even and steady, no emphasis spikes, faintly wry.
-  tts_speed: 0.91   # measured: this wording synthesizes ~160 wpm; x0.91 ≈ 146 wpm.
-                    # (Instructions are a blunt lever: "slow" wording -> 80 wpm,
-                    # neutral -> 170-207. Re-measure with one segment per new voice.)
+    Speak with a LIGHT, subtle Irish accent — just a gentle hint of the lilt,
+    soft and warm, not strong. A VERY YOUNG man in his early 20s — youthful,
+    bright, fresh voice with a boyish warmth, clearly a young storyteller who
+    loves his tales. Still calm and soothing for bedtime: measured relaxed
+    pace, flowing and natural, never rushed, even and steady, faintly wry.
+  tts_speed: 0.86   # measured: Puck+this wording = 132 wpm at 0.91 -> 0.86 ≈ 125 wpm
+                    # (deliberately the slow SLH pocket — matches their Cleopatra 123)
+  post_filter: >-   # "velvet-bright": compression + warm low + soft top + presence
+    acompressor=threshold=-24dB:ratio=2.5:attack=15:release=180:makeup=2,
+    equalizer=f=250:t=q:w=1.2:g=1.5,equalizer=f=7500:t=q:w=1:g=-3,
+    equalizer=f=3200:t=q:w=1:g=1.5
   # elevenlabs — designed voices (2026-07-13), matched to the measured SLH narrator
   # profile (F0 119 Hz, steady IQR 18, warm centroid 512):
   #   ACTIVE  "Sleepless Narrator v2 (young)"  A6QnFnaAbctdcKQmlLbT  (118/28/491 —

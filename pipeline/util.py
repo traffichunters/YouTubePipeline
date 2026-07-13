@@ -60,22 +60,24 @@ class CostLog:
         self.rows: list[dict] = []
         self._t0: float | None = None
         self._stage: str | None = None
+        self._pending: float = 0.0
 
     def start(self, stage: str) -> None:
-        self._stage, self._t0 = stage, time.time()
+        self._stage, self._t0, self._pending = stage, time.time(), 0.0
 
     def finish(self, cached: bool = False, cost_usd: float = 0.0, note: str = "") -> None:
         self.rows.append({
             "stage": self._stage,
             "seconds": 0.0 if cached else round(time.time() - self._t0, 1),
             "cached": cached,
-            "cost_usd": round(cost_usd, 4),
+            "cost_usd": round(cost_usd + self._pending, 4),
             "note": note,
         })
+        self._pending = 0.0
 
     def add_cost(self, usd: float) -> None:
-        if self.rows:
-            self.rows[-1]["cost_usd"] += usd
+        # accumulate against the RUNNING stage; applied when finish() writes its row
+        self._pending += usd
 
     def summary(self) -> str:
         lines = [f"{'stage':<14}{'time':>8}  {'cost':>8}  note"]

@@ -137,7 +137,8 @@ class BaseTTS:
         if abs(self.speed - 1.0) > 1e-3:
             chain.append(f"atempo={self.speed:.3f}")
         if self.post_filter:
-            chain.append(self.post_filter)
+            # tolerate YAML folded blocks: filter chains contain no meaningful spaces
+            chain.append("".join(self.post_filter.split()))
         run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
              "-af", ",".join(chain) or "anull", "-ar", "44100", "-ac", "2",
              "-b:a", "128k", str(out_path)])
