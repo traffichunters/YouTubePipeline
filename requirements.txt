@@ -1,0 +1,7 @@
+# Install into a venv created with /opt/homebrew/bin/python3.14 (system python is 3.9)
+pyyaml
+python-dotenv
+pillow
+numpy
+google-genai
+elevenlabs

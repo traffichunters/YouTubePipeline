@@ -1,0 +1,98 @@
+# Channel profile: replicates @SleeplessHistorian exactly (see ../../../VIDEO-STRUCTURE.md).
+# Channels are DATA — nothing in pipeline/ may reference this channel by name.
+
+channel:
+  slug: sleepless-historian
+  display_name: "BORING HISTORY FOR SLEEP"
+
+engines:                  # each switchable per run with --stub / --engines
+  script: claude          # claude | gemini | stub
+  image: gemini-flash     # gemini-flash (Nano Banana) | imagen-4 | stub
+  tts: elevenlabs         # elevenlabs | stub (macOS `say`, dev only)
+
+voice:                    # ElevenLabs
+  voice_id: env:ELEVENLABS_VOICE_ID   # set in .env; see .env.example for the character brief
+  model: eleven_multilingual_v2
+  stability: 0.5
+  similarity_boost: 0.75
+
+script:
+  wpm: 145
+  intro_template_verbatim: true       # the hardcoded ~45s opener (prompts/script_system.md)
+  outro: none                         # NEVER an outro/CTA at the end
+  hero_humor_density: high            # ~5–8 dry beats / 1000 words
+  tail_humor_density: low
+
+structure:                            # two-phase model, measured
+  target_minutes: 130
+  stories: [hero, tail, tail, tail]   # 1 illustrated hero + 3 dark tail stories
+  hero_share: 0.34                    # ~1/3 bright, ~2/3 dark
+  silent_ember_tail_minutes: 8        # narration-free ember outro
+  tail_eras_unrelated: true           # tail topics from DIFFERENT eras than the hero
+
+visuals:                              # numbers are MEASURED — see VIDEO-STRUCTURE.md
+  resolution: "1920x1080"
+  fps: 30
+  hero_image_seconds: 34              # steady-state hold
+  intro_ramp_holds: [6, 6, 7, 10, 14] # first images: faster montage, then steady state
+  per_image_motion: none              # stills are COMPLETELY static
+  image_transition_seconds: 0.35      # xfade=transition=hblur (validated)
+  go_dark_transition: hard_cut        # single-frame cut to black
+  dark_floor_luma: 19
+  ember_overlay: assets/ember_overlay.mp4   # ONE loop, reused forever (tools/make_overlay.py)
+  overlay_opacity_hero: 0.85          # screen blend weight over bright art
+  overlay_opacity_dark: 1.0
+  logo: assets/logo.png               # bottom-left, both phases, always
+  logo_height_frac: 0.13
+  era_art_styles:
+    medieval: "medieval illuminated-manuscript painting, flat perspective, gold-leaf details, period miniature style"
+    tudor: "Renaissance fresco painting, warm muted palette, monumental figures"
+    rome_egypt: "19th-century academic oil painting, warm detailed classical scene"
+    greek_myth: "ancient Grecian urn art style, orange and black figures, decorative borders"
+    feudal_japan: "ukiyo-e woodblock print, flat color planes, cherry blossom accents"
+    default: "19th-century academic oil painting, warm detailed historical scene"
+
+audio:                                # measured — VIDEO-STRUCTURE.md §5
+  loudnorm: "I=-19.5:LRA=6:TP=-2"     # −19.5 LUFS integrated; quieter than YT ref on purpose
+  music_bed: none
+
+thumbnail:                            # one branded template, comedy sells the click
+  brand_text: "BORING HISTORY FOR SLEEP"
+  background: "#f5f1e8"
+  text_color: "#111111"
+  scene_prompt: >-
+    cartoon illustration, thick dark outlines, warm earthy palette of browns tans and
+    muted reds, storybook style, 2-3 characters with exaggerated comedic expressions
+    (shock, cackling, snoring) interacting in a scene about {topic}, small topic props
+    scattered around, plain warm off-white background, no text anywhere
+  logo_corner: bottom-left
+
+metadata:
+  category: Entertainment
+  title_format: "{hook} - and more"   # hook-first; brand lives in the thumbnail
+  leetspeak_taboo_titles: true        # S3X-style spellings ONLY in title/thumbnail
+  description_boilerplate: |
+    Welcome to tonight's sleep story. This is boring history for sleep — calm,
+    slow-paced storytelling designed to help you fall asleep fast and stay asleep
+    all night. Use it as a bedtime story for grown-ups, a sleep meditation, or
+    quiet background audio for studying and relaxing. After the opening chapter
+    the screen fades to a dark, black screen background with softly drifting
+    embers — no bright light, no loud sounds, no interruptions, and no outro to
+    wake you. Perfect for insomnia, overthinking, or simply winding down after a
+    long day. Dim the lights, get comfortable, maybe turn on a fan for that soft
+    background hum, and let tonight's journey carry you off to sleep. Sweet
+    dreams, and see you tomorrow night.
+  tags:
+    - History
+    - boring history
+    - weird history
+    - sleep stories
+    - sleep
+    - fall asleep fast
+    - sleep video
+    - rain sounds for sleep
+    - stories for sleep
+    - bedtime stories
+    - bedtime story
+    - boring history for sleep
+    - learn history while you sleep

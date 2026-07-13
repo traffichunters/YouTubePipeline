@@ -1,0 +1,86 @@
+# DEMO channel — exists to prove the pipeline is channel-agnostic (config-only reuse).
+# A calm nature/science sleep channel with different branding; same code path.
+
+channel:
+  slug: demo-nature-sleep
+  display_name: "SLEEPY WILD FACTS"
+
+engines:
+  script: claude
+  image: gemini-flash
+  tts: elevenlabs
+
+voice:
+  voice_id: env:ELEVENLABS_VOICE_ID
+  model: eleven_multilingual_v2
+  stability: 0.6
+  similarity_boost: 0.75
+
+script:
+  wpm: 140
+  intro_template_verbatim: true
+  outro: none
+  hero_humor_density: medium
+  tail_humor_density: low
+
+structure:
+  target_minutes: 90
+  stories: [hero, tail, tail]
+  hero_share: 0.4
+  silent_ember_tail_minutes: 6
+  tail_eras_unrelated: true
+
+visuals:
+  resolution: "1920x1080"
+  fps: 30
+  hero_image_seconds: 34
+  intro_ramp_holds: [6, 6, 7, 10, 14]
+  per_image_motion: none
+  image_transition_seconds: 0.35
+  go_dark_transition: hard_cut
+  dark_floor_luma: 19
+  ember_overlay: ../../shared/dust_overlay.mp4   # dust-mote variant (same smoke, no embers)
+  overlay_opacity_hero: 0.85
+  overlay_opacity_dark: 1.0
+  logo: assets/logo.png
+  logo_height_frac: 0.13
+  era_art_styles:
+    forest: "atmospheric oil painting of deep forest, soft dappled light"
+    ocean: "moody maritime oil painting, deep blues and greens"
+    desert: "warm luminous desert landscape painting, golden hour"
+    mountains: "romantic alpine landscape painting, misty peaks"
+    default: "atmospheric landscape oil painting, soft natural light"
+
+audio:
+  loudnorm: "I=-19.5:LRA=6:TP=-2"
+  music_bed: none
+
+thumbnail:
+  brand_text: "SLEEPY WILD FACTS"
+  background: "#eef3ee"
+  text_color: "#1b2a1b"
+  scene_prompt: >-
+    cartoon illustration, thick outlines, cool calm palette of greens and blues,
+    storybook style, 2-3 sleepy animals with gentle comedic expressions in a scene
+    about {topic}, small nature props scattered around, plain pale background,
+    no text anywhere
+  logo_corner: bottom-left
+
+metadata:
+  category: Entertainment
+  title_format: "{hook} - and more"
+  leetspeak_taboo_titles: false
+  description_boilerplate: |
+    Welcome to tonight's sleep story from the wild. Calm, slow-paced nature
+    storytelling designed to help you fall asleep fast and stay asleep all night.
+    After the opening chapter the screen fades to a dark, ember-lit background —
+    no bright light, no loud sounds, and no outro to wake you. Dim the lights,
+    get comfortable, and let the natural world carry you off to sleep.
+  tags:
+    - nature sounds
+    - sleep stories
+    - sleep
+    - fall asleep fast
+    - bedtime stories
+    - relaxing facts
+    - learn while you sleep
