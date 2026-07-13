@@ -32,7 +32,9 @@ class ElevenTTS(BaseTTS):
             "stability": voice_cfg.get("stability", 0.5),
             "similarity_boost": voice_cfg.get("similarity_boost", 0.75),
         }
-        self.speed = float(voice_cfg.get("tts_speed", 1.0))
+        # per-provider knob: tts_speed is often tuned for the steerable engines
+        self.speed = float(voice_cfg.get("elevenlabs_speed",
+                                         voice_cfg.get("tts_speed", 1.0)))
 
     def _synth_chunk(self, text: str, out_path: Path) -> None:
         audio = self._client.text_to_speech.convert(

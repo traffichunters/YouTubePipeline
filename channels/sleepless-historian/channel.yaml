@@ -8,7 +8,7 @@ channel:
 engines:                  # each switchable per run with --stub / --*-engine flags
   script: claude          # claude | gemini | stub
   image: gemini-flash     # gemini-flash (Nano Banana) | imagen-4 | stub
-  tts: gemini             # gemini (~€1/video) | openai | elevenlabs (~€10+) | stub
+  tts: elevenlabs         # designed voice "Sleepless Narrator v1" | gemini (~€1) | openai | stub
 
 voice:
   # gemini / openai (steerable): the delivery prompt is the main quality knob
@@ -20,11 +20,14 @@ voice:
   tts_speed: 0.91   # measured: this wording synthesizes ~160 wpm; x0.91 ≈ 146 wpm.
                     # (Instructions are a blunt lever: "slow" wording -> 80 wpm,
                     # neutral -> 170-207. Re-measure with one segment per new voice.)
-  # elevenlabs (if engines.tts is switched back)
+  # elevenlabs — "Sleepless Narrator v1", designed 2026-07-13 to match the measured
+  # SLH narrator profile (F0 ~119 Hz ref, steady IQR ~18, warm centroid ~512;
+  # chosen candidate measured 97/16/449 — closest of 9 designs)
   voice_id: env:ELEVENLABS_VOICE_ID
   model: eleven_multilingual_v2
-  stability: 0.5
+  stability: 0.55            # steady bedtime delivery
   similarity_boost: 0.75
+  elevenlabs_speed: 1.05     # measured native 138 wpm on real script -> ~145 wpm
 
 script:
   wpm: 145
