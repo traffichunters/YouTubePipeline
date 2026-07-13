@@ -20,14 +20,17 @@ voice:
   tts_speed: 0.91   # measured: this wording synthesizes ~160 wpm; x0.91 ≈ 146 wpm.
                     # (Instructions are a blunt lever: "slow" wording -> 80 wpm,
                     # neutral -> 170-207. Re-measure with one segment per new voice.)
-  # elevenlabs — "Sleepless Narrator v1", designed 2026-07-13 to match the measured
-  # SLH narrator profile (F0 ~119 Hz ref, steady IQR ~18, warm centroid ~512;
-  # chosen candidate measured 97/16/449 — closest of 9 designs)
-  voice_id: env:ELEVENLABS_VOICE_ID
+  # elevenlabs — designed voices (2026-07-13), matched to the measured SLH narrator
+  # profile (F0 119 Hz, steady IQR 18, warm centroid 512):
+  #   ACTIVE  "Sleepless Narrator v2 (young)"  A6QnFnaAbctdcKQmlLbT  (118/28/491 —
+  #           pitch ≡ reference; younger remix of v1)
+  #   backup  "Sleepless Narrator v1"          TUjJBGdeb0Jzc2XA7RNj  (97/16/449 —
+  #           a touch deeper/older)
+  voice_id: A6QnFnaAbctdcKQmlLbT
   model: eleven_multilingual_v2
-  stability: 0.55            # steady bedtime delivery
+  stability: 0.65            # damps v2's slightly livelier pitch movement
   similarity_boost: 0.75
-  elevenlabs_speed: 1.05     # measured native 138 wpm on real script -> ~145 wpm
+  elevenlabs_speed: 1.0      # measured: v2 speaks 147 wpm native — already on target
 
 script:
   wpm: 145
