@@ -15,18 +15,23 @@ voice:
   # ACTIVE: "Puck" — natively young voice, light-Irish fireside storyteller.
   # Chosen by ear from 20+ candidates (see output/voice-design/), 2026-07-13.
   gemini_voice: Puck
+  # "Take D" (locked 2026-07-15 after the 22-channel voice survey —
+  # see ../../VOICE-LANDSCAPE.md): faint lilt, even pitch, warmed EQ.
+  # Measured 106 Hz / IQR 33 / centroid 603 — the niche "variant band".
   tts_instructions: >-
-    Speak with a LIGHT, subtle Irish accent — just a gentle hint of the lilt,
-    soft and warm, not strong. A VERY YOUNG man in his early 20s — youthful,
-    bright, fresh voice with a boyish warmth, clearly a young storyteller who
-    loves his tales. Still calm and soothing for bedtime: measured relaxed
-    pace, flowing and natural, never rushed, even and steady, faintly wry.
+    Speak mostly neutral with only a VERY FAINT trace of an Irish accent —
+    barely noticeable, just an occasional soft hint of the lilt on a word here
+    and there, never strong. A young man in his early 20s — youthful, warm,
+    boyish voice — telling bedtime tales. CRITICAL: keep the pitch very even
+    and steady throughout — minimal intonation movement, no sing-song, no
+    pitch rises and falls; a flat, calm, hypnotic, murmuring delivery.
+    Measured relaxed pace, never rushed, faintly wry.
   tts_speed: 0.86   # measured: Puck+this wording = 132 wpm at 0.91 -> 0.86 ≈ 125 wpm
                     # (deliberately the slow SLH pocket — matches their Cleopatra 123)
-  post_filter: >-   # "velvet-bright": compression + warm low + soft top + presence
+  post_filter: >-   # "velvet-warm": compression + stronger low warmth + darkened top
     acompressor=threshold=-24dB:ratio=2.5:attack=15:release=180:makeup=2,
-    equalizer=f=250:t=q:w=1.2:g=1.5,equalizer=f=7500:t=q:w=1:g=-3,
-    equalizer=f=3200:t=q:w=1:g=1.5
+    equalizer=f=250:t=q:w=1.2:g=2.5,equalizer=f=3500:t=q:w=1.5:g=-2.5,
+    treble=g=-3.5:f=6000
   # elevenlabs — designed voices (2026-07-13), matched to the measured SLH narrator
   # profile (F0 119 Hz, steady IQR 18, warm centroid 512):
   #   ACTIVE  "Sleepless Narrator v2 (young)"  A6QnFnaAbctdcKQmlLbT  (118/28/491 —
