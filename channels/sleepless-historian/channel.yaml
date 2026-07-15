@@ -59,7 +59,9 @@ visuals:                              # numbers are MEASURED — see VIDEO-STRUC
   hero_image_seconds: 34              # steady-state hold
   intro_ramp_holds: [6, 6, 7, 10, 14] # first images: faster montage, then steady state
   per_image_motion: none              # stills are COMPLETELY static
-  image_transition_seconds: 0.35      # xfade=transition=hblur (validated)
+  image_transition: fadeblack         # operator pick: fade out through dark, fade in
+                                      #   (SLH-measured original: hblur @ 0.35s)
+  image_transition_seconds: 1.5       # gentle; pairs with fadeblack
   go_dark_transition: hard_cut        # single-frame cut to black
   dark_floor_luma: 19
   ember_overlay: ../../shared/youtube-overlay.mp4  # operator-chosen 4K stock, prepped via tools/prep_overlay.py

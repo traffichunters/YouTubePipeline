@@ -1,8 +1,8 @@
 """S6 — video assembly. Implements the measured two-phase model exactly
 (VIDEO-STRUCTURE.md §6):
 
-  hero:  static stills, intro-ramp holds then steady ~34s, 0.35s xfade=hblur
-         dissolves, static vignette on the art, ember overlay screen-blended,
+  hero:  static stills, intro-ramp holds then steady ~34s, xfade transitions
+         (type/duration from channel config; SLH-measured default hblur 0.35s), static vignette on the art, ember overlay screen-blended,
          logo bottom-left  (opens hard on image 1, no fade-in)
   cut:   single-frame hard cut to black (a plain concat boundary)
   tail:  black + the same looped overlay + logo — encoded ONCE per loop length,
@@ -110,7 +110,8 @@ BATCH = 10  # images per ffmpeg invocation — keeps filtergraph memory bounded
 
 
 def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
-                        logo_h, op_hero, W, H, fps, work: Path) -> Path:
+                        logo_h, op_hero, W, H, fps, work: Path,
+                        trans_type: str = "hblur") -> Path:
     """Hero slideshow in resumable batches, then one lightweight file-level
     xfade join. Ember-loop offsets stay continuous across batch boundaries."""
     loop_len = ffprobe_duration(overlay)
@@ -144,7 +145,7 @@ def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
                 for j in range(1, n):
                     offset += bh[j - 1]
                     nxt = f"xf{j}" if j < n - 1 else "xf"
-                    parts.append(f"[{cur}][im{j}]xfade=transition=hblur:"
+                    parts.append(f"[{cur}][im{j}]xfade=transition={trans_type}:"
                                  f"duration={trans}:offset={offset:.3f}[{nxt}]")
                     cur = nxt
             parts += [
@@ -176,7 +177,7 @@ def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
     for k in range(1, len(seg_files)):
         offset += seg_durs[k - 1] - trans
         nxt = f"j{k}" if k < len(seg_files) - 1 else "vout"
-        parts.append(f"[{cur}][{k}:v]xfade=transition=hblur:"
+        parts.append(f"[{cur}][{k}:v]xfade=transition={trans_type}:"
                      f"duration={trans}:offset={offset:.3f}[{nxt}]")
         cur = nxt
     run([FFMPEG, "-y", *inputs, "-filter_complex", ";".join(parts),
@@ -224,9 +225,10 @@ def run_stage(ctx) -> None:
     # memory-killed on macOS. Batches are resumable and duration-verified.
     hero_mp4 = work / "hero.mp4"
     if not _valid_duration(hero_mp4, hero_s) or ctx.force:
+        trans_type = vis.get("image_transition", "hblur")
         hero_mp4 = _build_hero_chunked(ctx, images, holds, trans, hero_s,
                                        overlay, logo, logo_h, op_hero,
-                                       W, H, fps, work)
+                                       W, H, fps, work, trans_type)
         log(f"hero.mp4: {ffprobe_duration(hero_mp4):.1f}s")
 
     # ---- 2) dark loop: encoded once, repeated by stream copy ------------------
