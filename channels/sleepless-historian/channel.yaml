@@ -62,7 +62,7 @@ visuals:                              # numbers are MEASURED — see VIDEO-STRUC
   image_transition_seconds: 0.35      # xfade=transition=hblur (validated)
   go_dark_transition: hard_cut        # single-frame cut to black
   dark_floor_luma: 19
-  ember_overlay: assets/ember_overlay.mp4   # ONE loop, reused forever (tools/make_overlay.py)
+  ember_overlay: ../../shared/youtube-overlay.mp4  # operator-chosen 4K stock, prepped via tools/prep_overlay.py
   overlay_opacity_hero: 0.85          # screen blend weight over bright art
   overlay_opacity_dark: 1.0
   logo: assets/logo.png               # bottom-left, both phases, always

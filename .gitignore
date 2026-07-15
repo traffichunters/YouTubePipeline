@@ -5,3 +5,4 @@ __pycache__/
 output/
 *.DS_Store
 channels/*/history.jsonl
+shared/youtube-overlay-4k-src.mp4

@@ -74,12 +74,14 @@ No code changes. `channels/demo-nature-sleep/` exists as the working proof.
 
 ## Notes
 
-- The ember overlay is ONE seamless 120s loop reused on every video (measured drift
-  ~30° up-left, twinkling embers, warm haze breathing ±10 luma). Never regenerate per
-  video. Two styles exist: `--style embers` (SLH look) and `--style dust` (grey-white
-  motes, same smoke — `shared/dust_overlay.mp4`, used by demo-nature-sleep). Point any
-  channel at either via `visuals.ember_overlay` (paths resolve relative to the channel
-  dir, so `../../shared/…` works).
+- The overlay is ONE seamless loop reused on every video. The production asset is
+  `shared/youtube-overlay.mp4` (operator-chosen 4K stock — golden sparks + soft haze —
+  normalized with `tools/prep_overlay.py`: 1080p30, head flash trimmed, loop-seam
+  verified; the 4K original stays local, git-ignored at 112MB). To adopt a new overlay:
+  `python tools/prep_overlay.py --src <file> --out shared/<name>.mp4` (flags for slow,
+  warm tint, trims, loop crossfade), then point `visuals.ember_overlay` at it.
+  `tools/make_overlay.py` still generates procedural embers/dust loops if a channel
+  needs a from-scratch look.
 - The dark ⅔ of every video is encoded once per loop and repeated with `-c copy` —
   that's why a 2-hour video renders fast.
 - Costs are logged per stage in the run summary. A full 130-min video ≈ ~90

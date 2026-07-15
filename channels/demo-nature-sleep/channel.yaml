@@ -44,7 +44,7 @@ visuals:
   image_transition_seconds: 0.35
   go_dark_transition: hard_cut
   dark_floor_luma: 19
-  ember_overlay: ../../shared/dust_overlay.mp4   # dust-mote variant (same smoke, no embers)
+  ember_overlay: ../../shared/youtube-overlay.mp4  # operator-chosen overlay (see tools/prep_overlay.py)
   overlay_opacity_hero: 0.85
   overlay_opacity_dark: 1.0
   logo: assets/logo.png
