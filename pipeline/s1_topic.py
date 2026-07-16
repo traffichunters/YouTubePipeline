@@ -24,11 +24,19 @@ def run_stage(ctx) -> None:
         user_extra = f'\nThe hero topic MUST be: "{ctx.topic}". Build the brief around it.'
     else:
         user_extra = ""
+    if getattr(ctx, "brief", None):  # operator-authored episode brief (authoritative)
+        user_extra += (
+            "\n\n--- OPERATOR EPISODE BRIEF (authoritative: follow its outline and "
+            "use ONLY its source notes for factual talking points) ---\n"
+            + ctx.brief
+        )
 
+    ambience = ctx.channel["audio"].get("ambience_profiles") or {}
     prompt = fill(ctx.channel.prompt("topic_research"),
         n_tails=n_tails,
         used_topics=json.dumps(used[-60:]) if used else "(none yet)",
         era_keys=era_keys,
+        sound_keys=", ".join(ambience.keys()),
     ) + user_extra
 
     engine = get_script_engine(ctx.engine("script"))
@@ -42,6 +50,10 @@ def run_stage(ctx) -> None:
     for story in [brief["hero"], *brief["tails"]]:
         if story.get("era_style_key") not in style_keys:
             story["era_style_key"] = "default"
+    if ambience and brief["hero"].get("sound_profile") not in ambience:
+        brief["hero"]["sound_profile"] = (
+            ctx.channel["audio"].get("ambience_default")
+            or next(iter(ambience)))
 
     write_json(ctx.outdir / "topic_brief.json", brief)
     ctx.costs.add_cost(getattr(engine, "cost_usd", 0.0))

@@ -42,6 +42,7 @@ class Ctx:
     force: bool = False
     minutes: int | None = None
     topic: str | None = None
+    brief: str | None = None   # operator-authored episode brief (markdown text)
     preview: bool = False
     stub: bool = False
     engine_overrides: dict = field(default_factory=dict)
@@ -60,6 +61,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="pipeline.run")
     ap.add_argument("--channel", required=True)
     ap.add_argument("--topic", help="hero topic override (skips auto research)")
+    ap.add_argument("--brief",
+                    help="path to an operator-authored episode brief (markdown); "
+                         "passed to S1 as the authoritative outline + source notes")
     ap.add_argument("--minutes", type=int,
                     help="dev override for total video length")
     ap.add_argument("--slug", help="output folder name (default: from topic)")
@@ -87,8 +91,16 @@ def main() -> None:
     overrides = {k: v for k, v in (("script", a.script_engine),
                                    ("image", a.image_engine),
                                    ("tts", a.tts_engine)) if v}
+    brief_text = None
+    if a.brief:
+        bp = Path(a.brief)
+        if not bp.exists():
+            sys.exit(f"--brief file not found: {bp}")
+        brief_text = bp.read_text()
+
     ctx = Ctx(channel=channel, outdir=outdir, costs=CostLog(), force=a.force,
-              minutes=a.minutes, topic=a.topic, preview=a.preview, stub=a.stub,
+              minutes=a.minutes, topic=a.topic, brief=brief_text,
+              preview=a.preview, stub=a.stub,
               engine_overrides=overrides)
 
     names = [s[0] for s in STAGES]

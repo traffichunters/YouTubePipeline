@@ -1,0 +1,154 @@
+# Channel: QUIET WORLDS — calm educational documentaries for sleep, relaxation,
+# and curious minds. Strategy: ./STRATEGY.md (operator-authored, authoritative).
+#
+# Positioning: sleep-first, documentary-quality. NOT a boring-history clone, NOT
+# AI sleep spam. Three content pillars, rotated until the data picks a winner:
+#   1. Sleepy Origins        (early humans, first cities, lost civilizations)
+#   2. Quiet Europe          (Amsterdam, Bruges, canal houses, Golden Age)
+#   3. Relaxing Earth & Space (forests, geology, oceans, planets)
+#
+# Signature production traits (vs sleepless-historian):
+#   - subtle AMBIENCE BED under the narration ("feel it, don't hear it"),
+#     profile picked per episode (soft_rain / warm_room / deep_space / ...)
+#   - slow pan/zoom on the stills (per_image_motion: slow_pan)
+#   - calmer pacing: longer holds, gentle 2s fadeblack transitions
+#   - no CTA anywhere; soft scene-first opening, no template intro
+
+channel:
+  slug: quiet-worlds
+  display_name: "QUIET WORLDS"
+
+engines:
+  script: claude          # claude | gemini | stub
+  image: gemini-flash     # gemini-flash | imagen-4 | stub
+  tts: gemini             # Enceladus (see voice) | elevenlabs | openai | stub
+
+voice:
+  # "Late-night documentary narrator" (operator-approved 2026-07-16, sample:
+  # ../../output/voice-design/latenight_enceladus_092.mp3 — 129 wpm effective).
+  # Measured 102 Hz / IQR 25 / centroid 499 — the closest match yet to the
+  # niche core band (F0 115-126 / IQR <=31 / centroid 450-520). Matches the
+  # STRATEGY.md voice spec: mature soft British, soft-spoken not whispered,
+  # "the calm night professor".
+  gemini_voice: Enceladus
+  tts_instructions: >-
+    A man with a neutral, softly British accent — a late-night documentary
+    narrator; a gentle trans-Atlantic smoothness is fine, but never regional
+    and never posh or upperclass. Slow pace, but natural — unhurried, with
+    soft pauses between thoughts. Reassuring, intellectual, gentle tone. Low
+    energy, quietly wondrous — calm fascination, never dramatic or excited.
+    CRITICAL: keep the pitch even and the volume completely consistent — no
+    emphasis spikes, no sing-song, no rises and falls; a level, hypnotic,
+    murmuring delivery.
+  tts_speed: 0.80   # approved sample = atempo 0.92, but Gemini reads long
+                    # chunks ~20% faster than short samples -> start at 0.80,
+                    # re-measure on the first full render
+  post_filter: >-   # "velvet-warm": compression + low warmth + darkened top
+    acompressor=threshold=-24dB:ratio=2.5:attack=15:release=180:makeup=2,
+    equalizer=f=250:t=q:w=1.2:g=2.5,equalizer=f=3500:t=q:w=1.5:g=-2.5,
+    treble=g=-3.5:f=6000
+  # elevenlabs fallback (registered voices from the design sessions)
+  voice_id: TUjJBGdeb0Jzc2XA7RNj      # "Sleepless Narrator v1" — deeper/older
+  model: eleven_multilingual_v2
+  stability: 0.7
+  similarity_boost: 0.75
+  elevenlabs_speed: 0.92
+
+script:
+  wpm: 130                            # matches the approved voice's real pace
+  intro_template_verbatim: false      # soft scene-first opening, no CTA template
+  outro: none                         # never an outro; the fade-out IS the end
+  hero_humor_density: low             # gentle wit at most; wonder over jokes
+  tail_humor_density: low
+
+structure:
+  # STRATEGY.md's 90-min shape mapped onto the two-phase renderer:
+  #   soft opening + scene-setting + main journey  = illustrated hero (~66 min)
+  #   soft facts section                           = dark tail (~17 min)
+  #   fade-out                                     = silent ambient minutes
+  target_minutes: 90                  # strategy band: 75-120
+  stories: [hero, tail]               # tail = the "soft facts" companion section
+  hero_share: 0.80
+  silent_ember_tail_minutes: 7
+  tail_eras_unrelated: false          # soft facts stay on the SAME topic/world
+
+visuals:
+  resolution: "1920x1080"
+  fps: 30
+  hero_image_seconds: 45              # calmer than SLH's 34s — few cuts
+  intro_ramp_holds: [10, 12, 14]      # gentle ramp, no fast montage
+  per_image_motion: slow_pan          # slow drifting zoom on every still
+  motion_zoom: 1.06                   # max zoom factor over a hold
+  image_transition: fadeblack
+  image_transition_seconds: 2.0
+  go_dark_transition: hard_cut
+  ember_overlay: ../../shared/youtube-overlay.mp4   # golden sparks + soft haze
+  overlay_opacity_hero: 0.5           # subtler than SLH — premium, not smoky
+  overlay_opacity_dark: 0.9
+  logo: assets/logo.png
+  logo_height_frac: 0.10
+  era_art_styles:                     # per-story art direction (pillar-aware)
+    origins_prehistory: "soft painterly digital painting of prehistoric life, warm firelight and dusk tones, gentle atmospheric haze, quiet mood"
+    lost_civilizations: "atmospheric archaeological reconstruction painting, golden-hour light over ancient ruins and streets, soft mist, muted warm palette"
+    quiet_europe_interior: "Dutch Golden Age oil painting, warm candlelit interior, soft chiaroscuro, still-life detail, intimate quiet domestic scene"
+    quiet_europe_street: "moody old-European street scene painting, rain-wet cobblestones, warm window light in blue dusk, painterly, calm"
+    nature: "serene landscape painting, soft diffuse light, muted greens and deep blues, gentle mist, no harsh contrast"
+    space: "calm deep-space digital painting, rich dark blues and violets, soft nebula glow, gentle starlight, meditative"
+    default: "soft atmospheric painterly scene, warm muted palette, gentle light, calm quiet mood"
+
+audio:
+  loudnorm: "I=-19.5:LRA=6:TP=-2"
+  music_bed: none                     # never melodic music
+  # Ambience bed: looped under the ENTIRE video incl. the silent fade-out.
+  # Mixed ~18 dB under the voice — "you should feel the rain, not hear it".
+  # Procedural placeholder loops from tools/make_ambience.py; replace any of
+  # them with prepped stock whenever the operator finds better source audio.
+  ambience_profiles:
+    soft_rain: ../../shared/ambience/soft_rain.m4a       # cities, forests, canal houses
+    warm_room: ../../shared/ambience/warm_room.m4a       # interiors, monasteries, winter
+    deep_space: ../../shared/ambience/deep_space.m4a     # universe, planets, time
+    forest_night: ../../shared/ambience/forest_night.m4a # early humans, nature
+    ocean: ../../shared/ambience/ocean.m4a               # sailors, expeditions, Golden Age
+  ambience_default: soft_rain
+  ambience_lufs: -38                  # bed loudness before the mix (voice = -19.5)
+
+thumbnail:
+  brand_text: "QUIET WORLDS"
+  background: "#101724"               # deep night blue
+  text_color: "#f0ead8"               # warm parchment
+  scene_prompt: >-
+    calm atmospheric painterly illustration about {topic}: one large central
+    subject, warm or nocturnal palette, soft glowing light (candlelight,
+    moonlight, or dusk), gentle mist, premium documentary mood, restful not
+    dramatic, plain uncluttered composition, no text anywhere
+  logo_corner: bottom-left
+
+metadata:
+  category: Education
+  title_format: "{hook}"              # the hook carries its own calm suffix,
+                                      # e.g. "| History for Sleep" (see
+                                      # topic_research.md title strategy)
+  leetspeak_taboo_titles: false       # never; advertiser-safe by design
+  description_boilerplate: |
+    Welcome to Quiet Worlds — calm documentaries about history, science,
+    nature, and forgotten worlds, made for sleep, relaxation, and curious
+    minds. You can fall asleep to it, but if you stay awake, you'll actually
+    learn something. A soft-spoken narration, a gentle ambient soundscape, and
+    a slow visual journey with no bright flashes, no loud interruptions, and
+    no outro to wake you. In the final stretch the screen dims and the
+    narration gently fades, leaving only a quiet ambience to carry you off.
+    Dim the lights, get comfortable, and let tonight's world drift by. Sweet
+    dreams.
+  tags:
+    - sleep documentary
+    - calm documentary
+    - history for sleep
+    - science for sleep
+    - relaxing facts
+    - fall asleep fast
+    - sleep story for grown ups
+    - bedtime documentary
+    - quiet history
+    - relaxing history
+    - sleep aid
+    - documentary for sleep

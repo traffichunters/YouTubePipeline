@@ -94,10 +94,14 @@ def run_stage(ctx) -> None:
         log(f"  {seg_id}: {got} words (~{got/wpm:.1f} min)")
 
     hero = brief["hero"]
-    gen("intro", "hero", "Intro",
-        intro_words,
-        f"Write ONLY the intro template, with the [TOPIC] sentence introducing: "
-        f"{hero['topic']}. Give the topic sentence a dry twist.")
+    if sc.get("intro_template_verbatim", True):
+        intro_task = (f"Write ONLY the intro template, with the [TOPIC] sentence "
+                      f"introducing: {hero['topic']}. Give the topic sentence a dry twist.")
+    else:  # cold-open channels: no template, no greeting — scene-first opening
+        intro_task = (f"Write ONLY the COLD OPEN for: {hero['topic']}. A concrete "
+                      f"scene or paradox in the first 25 words, per the system prompt. "
+                      f"No greeting, no channel welcome, no 'today we'.")
+    gen("intro", "hero", "Intro", intro_words, intro_task)
     gen("hero", "hero", hero["topic"], hero_words,
         f"Write the hero story: {hero['topic']}.\n"
         f"Factual talking points to build on:\n- "

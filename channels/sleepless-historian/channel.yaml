@@ -12,43 +12,27 @@ engines:                  # each switchable per run with --stub / --*-engine fla
                           # | elevenlabs (designed v1/v2 voices) | openai | stub
 
 voice:
-  # ACTIVE (from video 2 onward, operator-picked 2026-07-16): "Enceladus" —
-  # "late-night documentary narrator". Approved sample:
-  # output/voice-design/latenight_enceladus_092.mp3 (129 wpm, atempo 0.92).
-  # Measured 102 Hz / IQR 25 / centroid 499 — closest match yet to the niche
-  # core band (115-126 / <=31 / 450-520). full-001 was rendered with the
-  # previous voice (take D, below) and stays as-is.
-  gemini_voice: Enceladus
+  # ACTIVE: "Take D" (locked 2026-07-15 after the 22-channel voice survey —
+  # see ../../VOICE-LANDSCAPE.md): Puck, young + very faint Irish lilt, even
+  # pitch, warmed EQ. Measured 106 Hz / IQR 33 / centroid 603 (the niche
+  # "variant band"). full-001 is rendered with this voice.
+  # (The Enceladus "late-night documentary" profile briefly staged here on
+  # 2026-07-16 moved to the quiet-worlds channel — its natural home.)
+  gemini_voice: Puck
   tts_instructions: >-
-    A man with a neutral, softly British accent — a late-night documentary
-    narrator; a gentle trans-Atlantic smoothness is fine, but never regional
-    and never posh or upperclass. Slow pace, but natural — unhurried, with
-    soft pauses between thoughts. Reassuring, intellectual, gentle tone. Low
-    energy, quietly wondrous — calm fascination, never dramatic or excited.
-    CRITICAL: keep the pitch even and the volume completely consistent — no
-    emphasis spikes, no sing-song, no rises and falls; a level, hypnotic,
-    murmuring delivery.
-  tts_speed: 0.80   # approved sample = 0.92, but long chunks run ~20% faster
-                    # than samples -> start at 0.80, re-measure on first full
-                    # render (0.77 hits the sample's 129 wpm exactly but risks
-                    # audible smearing)
+    Speak mostly neutral with only a VERY FAINT trace of an Irish accent —
+    barely noticeable, just an occasional soft hint of the lilt on a word here
+    and there, never strong. A young man in his early 20s — youthful, warm,
+    boyish voice — telling bedtime tales. CRITICAL: keep the pitch very even
+    and steady throughout — minimal intonation movement, no sing-song, no
+    pitch rises and falls; a flat, calm, hypnotic, murmuring delivery.
+    Measured relaxed pace, never rushed, faintly wry.
+  tts_speed: 0.86   # measured: Puck+this wording = 132 wpm at 0.91 -> 0.86 ≈ 125 wpm
+                    # (deliberately the slow SLH pocket — matches their Cleopatra 123)
   post_filter: >-   # "velvet-warm": compression + stronger low warmth + darkened top
     acompressor=threshold=-24dB:ratio=2.5:attack=15:release=180:makeup=2,
     equalizer=f=250:t=q:w=1.2:g=2.5,equalizer=f=3500:t=q:w=1.5:g=-2.5,
     treble=g=-3.5:f=6000
-  # PREVIOUS "Take D" (locked 2026-07-15 after the 22-channel survey, used on
-  # full-001): Puck, young + very faint Irish lilt, even pitch, same velvet-warm
-  # post_filter. Measured 106 Hz / IQR 33 / centroid 603 (niche "variant band").
-  #   gemini_voice: Puck
-  #   tts_instructions: >-
-  #     Speak mostly neutral with only a VERY FAINT trace of an Irish accent —
-  #     barely noticeable, just an occasional soft hint of the lilt on a word
-  #     here and there, never strong. A young man in his early 20s — youthful,
-  #     warm, boyish voice — telling bedtime tales. CRITICAL: keep the pitch
-  #     very even and steady throughout — minimal intonation movement, no
-  #     sing-song, no pitch rises and falls; a flat, calm, hypnotic, murmuring
-  #     delivery. Measured relaxed pace, never rushed, faintly wry.
-  #   tts_speed: 0.86
   # elevenlabs — designed voices (2026-07-13), matched to the measured SLH narrator
   # profile (F0 119 Hz, steady IQR 18, warm centroid 512):
   #   ACTIVE  "Sleepless Narrator v2 (young)"  A6QnFnaAbctdcKQmlLbT  (118/28/491 —

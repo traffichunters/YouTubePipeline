@@ -89,9 +89,24 @@ def _res(ctx) -> tuple[int, int]:
     return int(w), int(h)
 
 
-def _prep_img(idx: int, w: int, h: int) -> str:
+def _prep_img(idx: int, w: int, h: int, motion: str = "none",
+              dur_s: float = 0.0, fps: int = 30, zoom: float = 1.06,
+              zoom_in: bool = True) -> str:
     """Scale-to-cover + crop + static vignette (the darkening the screen-blended
-    overlay can't provide) + conform."""
+    overlay can't provide) + conform. motion=slow_pan adds a gentle centred
+    drift-zoom over the still's hold (in/out alternating per image); the source
+    is supersampled 1.3x first so zoompan's sub-pixel steps stay smooth."""
+    if motion == "slow_pan" and dur_s > 0:
+        sw, sh = int(w * 1.3) // 2 * 2, int(h * 1.3) // 2 * 2
+        n = max(1, round(dur_s * fps))
+        dz = zoom - 1.0
+        z = (f"min(1+{dz:.4f}*on/{n},{zoom:.4f})" if zoom_in
+             else f"max({zoom:.4f}-{dz:.4f}*on/{n},1)")
+        return (f"[{idx}:v]scale={sw}:{sh}:force_original_aspect_ratio=increase,"
+                f"crop={sw}:{sh},setsar=1,"
+                f"zoompan=z='{z}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2'"
+                f":d=1:s={w}x{h}:fps={fps},"
+                f"vignette=angle=PI/5,format=yuv420p[im{idx}]")
     return (f"[{idx}:v]scale={w}:{h}:force_original_aspect_ratio=increase,"
             f"crop={w}:{h},setsar=1,vignette=angle=PI/5,format=yuv420p[im{idx}]")
 
@@ -111,7 +126,8 @@ BATCH = 10  # images per ffmpeg invocation — keeps filtergraph memory bounded
 
 def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
                         logo_h, op_hero, W, H, fps, work: Path,
-                        trans_type: str = "hblur") -> Path:
+                        trans_type: str = "hblur", motion: str = "none",
+                        motion_zoom: float = 1.06) -> Path:
     """Hero slideshow in resumable batches, then one lightweight file-level
     xfade join. Ember-loop offsets stay continuous across batch boundaries."""
     loop_len = ffprobe_duration(overlay)
@@ -129,15 +145,19 @@ def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
         if not (_valid_duration(seg, seg_dur) and not ctx.force):
             n = len(idxs)
             inputs: list[str] = []
+            durs: list[float] = []
             for j, i in enumerate(idxs):
                 dur = bh[j] + (trans if j < n - 1 else 0)
+                durs.append(dur)
                 inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-r", str(fps),
                            "-i", str(images[i])]
             ov_off = t_cursor % loop_len
             inputs += ["-ss", f"{ov_off:.3f}", "-stream_loop", "-1",
                        "-i", str(overlay)]
             inputs += ["-i", str(logo)]
-            parts = [_prep_img(j, W, H) for j in range(n)]
+            parts = [_prep_img(j, W, H, motion, durs[j], fps, motion_zoom,
+                               zoom_in=(idxs[j] % 2 == 0))
+                     for j in range(n)]
             if n == 1:
                 parts.append("[im0]copy[xf]")
             else:
@@ -186,6 +206,27 @@ def _build_hero_chunked(ctx, images, holds, trans, hero_s, overlay, logo,
     return hero
 
 
+def _ambience_bed(ctx) -> Path | None:
+    """Resolve this episode's ambience-bed loop, or None if the channel has no
+    ambience configured. S1 picks a sound_profile per episode; fall back to the
+    channel default when it's missing/unknown."""
+    profiles = ctx.channel["audio"].get("ambience_profiles") or {}
+    if not profiles:
+        return None
+    brief_p = ctx.outdir / "topic_brief.json"
+    key = ""
+    if brief_p.exists():
+        key = read_json(brief_p).get("hero", {}).get("sound_profile", "")
+    if key not in profiles:
+        key = ctx.channel["audio"].get("ambience_default") or next(iter(profiles))
+    path = ctx.channel.dir / profiles[key]
+    if not path.exists():
+        from .util import die
+        die(f"missing ambience asset {path} — generate the beds once with "
+            f"tools/make_ambience.py (see README)")
+    return path
+
+
 # -------------------------------------------------------------------- stage --
 def run_stage(ctx) -> None:
     vis = ctx.channel["visuals"]
@@ -226,9 +267,11 @@ def run_stage(ctx) -> None:
     hero_mp4 = work / "hero.mp4"
     if not _valid_duration(hero_mp4, hero_s) or ctx.force:
         trans_type = vis.get("image_transition", "hblur")
+        motion = vis.get("per_image_motion", "none")
         hero_mp4 = _build_hero_chunked(ctx, images, holds, trans, hero_s,
                                        overlay, logo, logo_h, op_hero,
-                                       W, H, fps, work, trans_type)
+                                       W, H, fps, work, trans_type, motion,
+                                       float(vis.get("motion_zoom", 1.06)))
         log(f"hero.mp4: {ffprobe_duration(hero_mp4):.1f}s")
 
     # ---- 2) dark loop: encoded once, repeated by stream copy ------------------
@@ -267,12 +310,30 @@ def run_stage(ctx) -> None:
     all_lst = work / "audio_all.txt"
     all_lst.write_text("".join(
         f"file '../audio/{Path(t['file']).name}'\n" for t in timings["segments"]))
-    loud = ctx.channel["audio"]["loudnorm"]
+    aud_cfg = ctx.channel["audio"]
+    loud = aud_cfg["loudnorm"]
     aac = work / "narration.m4a"
     video_dur = ffprobe_duration(video_mp4)
     run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", str(all_lst),
          "-af", f"loudnorm={loud},apad", "-t", f"{video_dur:.3f}",
          "-ar", "44100", "-ac", "2", "-c:a", "aac", "-b:a", "128k", str(aac)])
+
+    # optional ambience bed: looped under the WHOLE video (incl. the silent
+    # close), well below the voice — "you should feel it, not hear it"
+    bed_path = _ambience_bed(ctx)
+    if bed_path is not None:
+        bed_lufs = float(aud_cfg.get("ambience_lufs", -38))
+        mixed = work / "narration_bed.m4a"
+        run([FFMPEG, "-y", "-i", str(aac),
+             "-stream_loop", "-1", "-i", str(bed_path),
+             "-filter_complex",
+             f"[1:a]loudnorm=I={bed_lufs}:LRA=4:TP=-6,"
+             f"afade=t=in:d=6,aresample=44100,aformat=channel_layouts=stereo[bed];"
+             f"[0:a][bed]amix=inputs=2:duration=first:normalize=0[aout]",
+             "-map", "[aout]", "-t", f"{video_dur:.3f}",
+             "-c:a", "aac", "-b:a", "160k", str(mixed)])
+        aac = mixed
+        log(f"ambience bed: {bed_path.name} at {bed_lufs} LUFS under the voice")
     run([FFMPEG, "-y", "-i", str(video_mp4), "-i", str(aac),
          "-map", "0:v", "-map", "1:a", "-c", "copy",
          "-movflags", "+faststart", str(final)])
